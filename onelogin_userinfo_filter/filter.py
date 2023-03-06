@@ -30,9 +30,17 @@ class OneloginUserinfo(wsgi.Middleware):
           LOG.error("invalid response. url:%(url)s status_code:%(status_code)s text:%(text)s", 
             {"url": resp.url, "status_code": resp.status_code, "text": resp.text})
         else:
+          userinfo = {}
           for key, value in resp.json().items():
-            name = "%s%s" % (self.prefix, key)
-            request.environ[name] = value
+            if isinstance(value, dict):
+              for k, v in value.items():
+                name = "%s%s_%s" % (self.prefix, key, k)
+                userinfo[name] = v
+            else:
+              name = "%s%s" % (self.prefix, key)
+              userinfo[name] = value
+          LOG.debug("userinfo: %s", userinfo)
+          request.environ.update(userinfo)
 
     def _check_auth_by_onelogin(self, envs):
       return "HTTP_OIDC_ISS" in envs and envs["HTTP_OIDC_ISS"] == self.issuer
